@@ -1,1 +1,1058 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Unsaid - Sepia Tavern (Large Font Edition)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            tavernDark: '#2a1a12',
+            tavernPanel: '#3a2419',
+            sepiaGold: '#d97706',
+            amberGlow: '#f59e0b'
+          },
+          fontFamily: {
+            cinzel: ['Cinzel', 'serif'],
+            serif: ['"Playfair Display"', 'serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=JetBrains+Mono:wght@500;700&family=Playfair+Display:ital,wght@0,600;0,800;1,600&display=swap&subset=cyrillic');
+    body { background-color: #2a1a12; color: #f3f4f6; overflow: hidden; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+    .tavern-bg { background: radial-gradient(circle at 50% 30%, rgba(135, 85, 55, 0.8) 0%, rgba(65, 45, 30, 0.95) 85%), linear-gradient(180deg, #4a3429 0%, #2a1a12 100%); }
+    .sepia-panel { background: rgba(68, 46, 36, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(217, 119, 6, 0.5); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); }
+    .sepia-btn { background: rgba(217, 119, 6, 0.2); border: 1px solid rgba(217, 119, 6, 0.4); transition: all 0.2s; }
+    .sepia-btn:hover { background: rgba(217, 119, 6, 0.4); border-color: rgba(245, 158, 11, 0.8); }
+    .shake { animation: shakeAnim 0.25s ease-in-out; }
+    @keyframes shakeAnim { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-4px, 3px); } 40% { transform: translate(4px, -3px); } 60% { transform: translate(-3px, -2px); } 80% { transform: translate(3px, 2px); } }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(217, 119, 6, 0.6); border-radius: 6px; }
+    body.theme-midnight { filter: hue-rotate(180deg) saturate(1.2) brightness(0.9); }
+    body.theme-emerald { filter: hue-rotate(260deg) saturate(1.2) brightness(1.0); }
+  </style>
+</head>
+<body class="tavern-bg h-[100dvh] w-screen relative flex flex-col justify-between overflow-hidden font-serif text-amber-50">
+
+  <!-- X(Twitter)アクセス制限用ガード画面 -->
+  <div id="xGateScreen" class="fixed inset-0 z-50 bg-[#120b08] flex flex-col justify-center items-center p-6 text-center">
+    <div class="sepia-panel p-8 rounded-3xl max-w-sm w-full border border-amber-500/50 shadow-2xl space-y-4">
+      <div class="text-4xl">🔒</div>
+      <h2 class="text-xl font-bold font-cinzel text-amber-100">X 会員限定アクセス</h2>
+      <p class="text-xs text-amber-200 leading-relaxed">
+        このアプリは <b>X（Twitter）のプロフィールリンク</b> からアクセスした方のみご利用いただけます。
+      </p>
+      <div class="pt-2">
+        <a href="https://x.com" id="xProfileLink" class="block w-full py-3 rounded-xl bg-black border border-amber-500/60 text-amber-300 font-bold text-sm hover:bg-amber-950 transition">
+          𝕏 プロフィールへ戻る
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="bgCanvas" class="absolute inset-0 z-0 pointer-events-none"></canvas>
+
+  <header class="relative z-30 w-full px-4 py-3 flex justify-between items-center bg-stone-900/60 border-b border-sepiaGold/40 shadow-md">
+    <div class="flex items-center space-x-2">
+      <div class="w-3 h-3 rounded-full bg-sepiaGold animate-pulse"></div>
+      <span class="font-cinzel font-black tracking-widest text-amber-100 text-2xl">Unsaid</span>
+    </div>
+
+    <div id="gameHud" class="hidden flex items-center space-x-4 sm:space-x-8">
+      <div class="text-right"><div class="text-[11px] text-amber-300 font-mono">SCORE</div><div id="hudScore" class="font-mono text-amber-50 font-bold text-xl leading-none">0</div></div>
+      <div class="text-right"><div class="text-[11px] text-amber-300 font-mono">CHAIN</div><div id="hudCombo" class="font-mono text-amber-200 font-bold text-xl leading-none">0</div></div>
+      <div class="text-right"><div class="text-[11px] text-amber-300 font-mono">TIME</div><div id="hudTimer" class="font-mono text-rose-300 font-bold text-xl leading-none">60s</div></div>
+    </div>
+
+    <div class="flex items-center space-x-3">
+      <button id="bgmBtn" class="px-3 py-2 rounded-full sepia-btn text-amber-200 hover:text-white flex items-center text-sm font-bold shadow-md">
+        <span id="bgmIcon" class="mr-1">▶️</span> 
+        <span id="bgmStatus" class="text-xs font-mono text-slate-400">BGM 停止</span>
+      </button>
+      <button id="homeBtn" onclick="forceReturnHome()" class="hidden p-2.5 rounded-full sepia-btn text-amber-200 hover:text-white text-lg" title="メニューに戻る">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="feverBanner" class="absolute top-20 left-0 w-full z-20 pointer-events-none opacity-0 transition-opacity duration-300 flex justify-center items-center">
+    <div class="px-8 py-2 rounded-full bg-amber-900/90 border border-amber-400 text-amber-100 font-cinzel font-bold text-sm animate-bounce shadow-2xl">🍷 FEVER MODE x2 🍷</div>
+  </div>
+
+  <!-- MENU SCREEN -->
+  <div id="menuScreen" class="relative z-30 flex-1 flex flex-col justify-start items-center px-4 max-w-lg mx-auto w-full space-y-4 overflow-y-auto py-6 pb-12">
+    <div class="text-center py-2 space-y-2">
+      <h1 class="text-5xl sm:text-7xl font-cinzel font-black tracking-widest text-amber-50 drop-shadow-md">Unsaid</h1>
+      <p class="text-sm sm:text-base text-amber-200 font-serif tracking-wider">英単語の語根とスペルを深める</p>
+    </div>
+
+    <div class="w-full sepia-panel rounded-xl p-1.5 grid grid-cols-2 gap-1.5 border border-sepiaGold/40 mb-1 shadow-sm">
+      <button id="modeAutoBtn" onclick="setGamePlayMode('auto')" class="py-2.5 rounded-lg font-bold text-sm sm:text-base transition flex items-center justify-center space-x-1 text-amber-300 hover:text-amber-100"><span>▶️ 自動再生</span></button>
+      <button id="modeChoiceBtn" onclick="setGamePlayMode('choice')" class="py-2.5 rounded-lg font-bold text-sm sm:text-base transition flex items-center justify-center space-x-1 text-amber-300 hover:text-amber-100"><span>⚡ 4択</span></button>
+      <button id="modeTypingBtn" onclick="setGamePlayMode('typing')" class="py-2.5 rounded-lg font-bold text-sm sm:text-base transition flex items-center justify-center space-x-1 text-amber-300 hover:text-amber-100"><span>⌨️ タイピング</span></button>
+      <button id="modeKimaruBtn" onclick="setGamePlayMode('kimaru')" class="py-2.5 rounded-lg font-bold text-sm sm:text-base transition flex items-center justify-center space-x-1 text-amber-300 hover:text-amber-100"><span>🧠 KIMARU</span></button>
+    </div>
+
+    <div class="w-full sepia-panel rounded-xl p-3 border border-sepiaGold/40 flex items-center justify-between text-sm shadow-sm">
+      <span class="text-amber-300 font-bold">⏱️ 速度:</span>
+      <div class="flex space-x-2 text-sm">
+        <button id="speedSlowBtn" onclick="setSpeedLevel('slow')" class="px-3 py-1.5 rounded-lg font-bold text-amber-300 hover:text-amber-100">ゆったり</button>
+        <button id="speedNormalBtn" onclick="setSpeedLevel('normal')" class="px-3 py-1.5 rounded-lg font-bold text-amber-300 hover:text-amber-100">普通</button>
+        <button id="speedFastBtn" onclick="setSpeedLevel('fast')" class="px-3 py-1.5 rounded-lg font-bold text-amber-300 hover:text-amber-100">速い</button>
+      </div>
+    </div>
+
+    <div class="w-full space-y-3">
+      <div class="flex rounded-xl bg-black/40 p-1.5 border border-sepiaGold/40 text-sm sm:text-base shadow-sm">
+        <button id="tabAffix" onclick="selectRootOrigin('affix')" class="flex-1 py-2 font-bold rounded-lg transition text-amber-300 hover:text-amber-100">接辞</button>
+        <button id="tabLatin" onclick="selectRootOrigin('latin')" class="flex-1 py-2 font-bold rounded-lg transition text-amber-300 hover:text-amber-100">ラテン</button>
+        <button id="tabGermanic" onclick="selectRootOrigin('germanic')" class="flex-1 py-2 font-bold rounded-lg transition text-amber-300 hover:text-amber-100">ゲルマン</button>
+        <button id="tabGreek" onclick="selectRootOrigin('greek')" class="flex-1 py-2 font-bold rounded-lg transition text-amber-300 hover:text-amber-100">ギリシャ</button>
+      </div>
+      <div id="stageListContainer" class="space-y-3 w-full pb-2"></div>
+      
+      <div class="w-full space-y-3 pt-4 border-t border-sepiaGold/30 pb-8">
+        <button onclick="startExamMode()" class="w-full py-4 rounded-xl font-black text-lg sm:text-xl bg-gradient-to-r from-amber-600 to-amber-800 text-amber-50 shadow-[0_0_15px_rgba(217,119,6,0.6)] transform active:scale-95 transition border border-amber-400">
+          👑 苦手特化・全語根エンドレス検定
+        </button>
+        
+        <button onclick="startAllRootAutoPlay()" class="w-full py-3 rounded-xl font-bold text-base sm:text-lg bg-black/60 border border-amber-500/50 text-amber-200 shadow-md hover:bg-amber-900/40 transform active:scale-95 transition">
+          🎧 全語根エンドレス自動再生 (シャッフルなし・派生語1つ)
+        </button>
+
+        <div class="flex space-x-3 pt-2">
+          <div class="flex-1 sepia-panel rounded-xl p-3 border border-sepiaGold/40 shadow-sm">
+            <div class="text-xs text-amber-300 font-bold mb-2">🎨 テーマ</div>
+            <select id="themeSelect" onchange="changeTheme(this.value)" class="w-full bg-black/60 text-amber-100 text-sm p-1.5 rounded-lg border border-sepiaGold/30 outline-none focus:border-amber-500">
+              <option value="sepia">セピア酒場 (Sepia)</option>
+              <option value="midnight">真夜中の書庫 (Midnight)</option>
+              <option value="emerald">賢者の森 (Emerald)</option>
+            </select>
+          </div>
+          <div class="flex-1 sepia-panel rounded-xl p-3 border border-sepiaGold/40 shadow-sm">
+            <div class="text-xs text-amber-300 font-bold mb-2">🎵 BGM</div>
+            <select id="bgmSelect" onchange="sound.changeTrack(parseInt(this.value))" class="w-full bg-black/60 text-amber-100 text-sm p-1.5 rounded-lg border border-sepiaGold/30 outline-none focus:border-amber-500">
+              <option value="1">1. 静かな酒場</option>
+              <option value="2">2. クリスタル</option>
+              <option value="3">3. 集中と緊張</option>
+            </select>
+            <div class="text-[9px] text-amber-500 mt-1">※右上の▶で再生（マナーモード解除必須）</div>
+          </div>
+        </div>
+        
+        <div class="mt-3 sepia-panel rounded-xl p-3 border border-sepiaGold/40 shadow-sm">
+          <div class="text-xs text-amber-300 font-bold mb-2">🗣️ 発音の再生速度</div>
+          <select id="voiceRateSelect" onchange="sound.changeVoiceRate(parseFloat(this.value))" class="w-full bg-black/60 text-amber-100 text-sm p-1.5 rounded-lg border border-sepiaGold/30 outline-none focus:border-amber-500">
+            <option value="0.6">ゆっくり (0.6x)</option>
+            <option value="0.9" selected>標準 (0.9x)</option>
+            <option value="1.2">やや速い (1.2x)</option>
+            <option value="1.5">速い (1.5x)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="gameScreen" class="hidden relative z-10 flex-1 flex flex-col justify-between p-4 max-w-lg mx-auto w-full h-full overflow-hidden">
+    <div class="w-full h-2 bg-black/50 rounded-full overflow-hidden z-20 border border-sepiaGold/40">
+      <div id="feverBar" class="h-full w-0 bg-amber-400 transition-all duration-300 shadow-[0_0_8px_#f59e0b]"></div>
+    </div>
+
+    <div id="kimaruRootInfoArea" class="hidden w-full z-20 mt-4 text-center">
+      <div class="text-[14px] text-amber-200 font-bold mb-1 bg-black/60 rounded-full py-2 px-6 inline-block border border-amber-500/50 shadow-md">
+        💡 語根: <span id="kimaruRootMeaning" class="text-amber-400 text-xl mx-1"></span> <span id="kimaruRootSpell" class="hidden"></span>
+      </div>
+    </div>
+
+    <div id="playArea" class="relative flex-1 w-full my-4 overflow-hidden flex justify-center items-center">
+      <div id="deadlineBarContainer" class="absolute bottom-0 left-0 w-full h-1.5 bg-black/60 z-10 rounded-full transition-opacity duration-300">
+        <div id="deadlineBarFill" class="h-full bg-rose-600/80 w-full shadow-[0_0_8px_rgba(225,29,72,0.8)] transition-all ease-linear"></div>
+      </div>
+
+      <div id="fallingCard" class="w-[94%] max-w-[420px] sepia-panel rounded-2xl p-6 text-center border-t border-sepiaGold/60 pointer-events-auto break-words shadow-2xl relative z-20">
+        <button onclick="speakCurrentDerived()" class="absolute top-3 right-3 p-2 text-amber-200 hover:text-white transition bg-amber-900/40 rounded-xl border border-amber-600/40 shadow-sm z-30" title="発音を聞く">🔊</button>
+        
+        <div id="questionCategory" class="text-xs font-mono tracking-widest text-amber-300 mb-2 font-bold">STAGE</div>
+        
+        <div class="border-b border-sepiaGold/40 pb-4 mb-4">
+          <div id="rootSpellText" class="text-3xl sm:text-5xl font-bold text-amber-50 tracking-wide font-mono drop-shadow-md break-words">---</div>
+          <div id="rootMeaningText" class="text-lg sm:text-xl text-amber-200 font-bold mt-2">---</div>
+        </div>
+
+        <div class="min-h-[5rem] flex flex-col justify-center items-center w-full">
+           <div class="flex items-center w-full justify-center">
+             <div id="derivedSpellText" class="text-xl sm:text-3xl font-bold text-amber-100 tracking-wider font-mono break-words leading-tight text-center">---</div>
+           </div>
+           <div id="derivedMeaningText" class="text-base sm:text-lg text-amber-200 font-bold mt-3 text-center">---</div>
+        </div>
+
+        <div id="typingGuideArea" class="hidden mt-4 pt-4 border-t border-sepiaGold/30">
+          <div id="typedBufferDisplay" class="font-mono text-xl sm:text-3xl font-bold tracking-widest text-amber-200 min-h-[2.5rem] bg-black/60 rounded-lg py-2 px-3 sm:px-6 border border-amber-600/50 inline-block shadow-inner break-all"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="interactivePad" class="mb-4 w-full z-30">
+      <div id="answersGrid" class="grid grid-cols-2 gap-3 w-full"></div>
+      <div id="virtualKeyboard" class="hidden sepia-panel rounded-2xl p-3 border border-sepiaGold/40 space-y-2 shadow-md">
+        <div class="flex justify-center space-x-1.5" id="kbRow1"></div>
+        <div class="flex justify-center space-x-1.5" id="kbRow2"></div>
+        <div class="flex justify-center space-x-1.5" id="kbRow3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT SCREEN -->
+  <div id="resultScreen" class="hidden relative z-30 flex-1 flex flex-col justify-center items-center px-4 max-w-lg mx-auto w-full text-center py-6 overflow-y-auto space-y-6">
+    <div class="sepia-panel w-full rounded-3xl p-8 border border-sepiaGold/50 space-y-6 max-h-[85vh] overflow-y-auto shadow-2xl">
+      <div id="rankBadge" class="text-7xl font-mono font-bold text-amber-300 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">S</div>
+      <div>
+        <h2 class="text-3xl font-bold text-amber-50 font-cinzel">STAGE CLEAR</h2>
+        <div id="passNotification" class="text-sm text-emerald-400 font-bold mt-2 hidden">🎉 クリア！</div>
+      </div>
+      <div class="grid grid-cols-2 gap-4 pt-4 border-t border-sepiaGold/30 font-mono">
+        <div class="bg-black/40 rounded-2xl p-4 border border-sepiaGold/30"><div class="text-xs text-amber-300">SCORE</div><div id="resultScore" class="text-2xl font-bold text-amber-100">0</div></div>
+        <div class="bg-black/40 rounded-2xl p-4 border border-sepiaGold/30"><div class="text-xs text-amber-300">MAX CHAIN</div><div id="resultCombo" class="text-2xl font-bold text-amber-300">0</div></div>
+        <div class="bg-black/40 rounded-2xl p-4 border border-sepiaGold/30"><div class="text-xs text-amber-300">ACCURACY</div><div id="resultAccuracy" class="text-2xl font-bold text-rose-300">100%</div></div>
+        <div class="bg-black/40 rounded-2xl p-4 border border-sepiaGold/30"><div class="text-xs text-amber-300">SPEED (CPM)</div><div id="resultSpeed" class="text-2xl font-bold text-slate-100">0</div></div>
+      </div>
+      
+      <div class="flex space-x-3 pt-4">
+        <button onclick="forceReturnHome()" class="flex-1 py-4 bg-stone-800 text-amber-100 border border-sepiaGold/50 font-bold rounded-2xl hover:bg-stone-700 transition text-sm sm:text-base shadow-md">MENU</button>
+        <button onclick="restartGame()" class="flex-1 py-4 bg-amber-700 text-amber-50 font-bold rounded-2xl hover:bg-amber-600 transition text-sm sm:text-base shadow-md">もう一度</button>
+        <button id="nextStageBtn" class="hidden flex-1 py-4 bg-amber-500 text-amber-950 font-bold rounded-2xl hover:bg-amber-400 transition text-sm sm:text-base shadow-md">NEXT ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function checkXAccess() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isFromXParam = urlParams.get('ref') === 'x' || urlParams.get('from') === 'x';
+      const ref = document.referrer.toLowerCase();
+      const isFromXReferrer = ref.includes('t.co') || ref.includes('twitter.com') || ref.includes('x.com');
+      const isTwitterUA = /Twitter/i.test(navigator.userAgent);
+      if (isFromXParam || isFromXReferrer || isTwitterUA) {
+        document.getElementById('xGateScreen').classList.add('hidden');
+      } else {
+        document.getElementById('xGateScreen').classList.remove('hidden');
+      }
+    })();
+
+    const rawDB = {
+      affix: [
+        "STAGE 1: 必須・方向の接頭辞,re-,再び・元へ,re・turn:戻る/re・view:見直す/re・new:更新する",
+        "-,pro-,前へ・賛成,pro・gress:進歩/pro・mote:促進する/pro・duce:生産する",
+        "-,pre-,あらかじめ,pre・dict:予測する/pre・pare:準備する/pre・vent:防ぐ",
+        "-,post-,後,post・pone:延期する/post・script:追伸/post・graduate:大学院生",
+        "-,sub- / sup-,下へ,sub・way:地下鉄/sub・mit:提出する/sup・ply:供給する",
+        "-,trans-,越えて,trans・fer:移す/trans・port:輸送する/trans・late:翻訳する",
+        "-,inter-,間に,inter・national:国際的な/inter・act:交流する/inter・view:面接",
+        "-,con- / com-,共に,con・nect:繋ぐ/com・bine:結合する/con・duct:実行する",
+        "-,ex-,外へ,ex・port:輸出する/ex・clude:除外する/ex・tend:延長する",
+        "-,ad- / at- / ac-,〜へ,at・tract:引きつける/ac・cept:受け入れる/ad・vise:助言する",
+        "STAGE 2: 名詞化・変化の接尾辞,-tion / -sion,動作・状態,ac・tion:行動/deci・sion:決定/vi・sion:視覚",
+        "-, -ment,結果・手段,develop・ment:開発/pay・ment:支払い/state・ment:声明",
+        "-, -ity / -ty,性質・状態,qual・ity:質/activ・ity:活動/secur・ity:安全",
+        "-, -ance / -ence,状態・性質,dist・ance:距離/confer・ence:会議/pres・ence:存在",
+        "-, -able / -ible,〜できる,avail・able:利用できる/vis・ible:目に見える/flex・ible:柔軟な",
+        "-, -al,〜の,form・al:公式の/annu・al:毎年の/offici・al:公の",
+        "-, -ive,性質,act・ive:活発な/effect・ive:効果的な/expens・ive:高価な",
+        "-, -ous / -ious,〜に満ちた,fam・ous:有名な/continu・ous:連続的な/vari・ous:様々な",
+        "-, -ize,〜化する,organ・ize:組織する/real・ize:気付く/summar・ize:要約する",
+        "-, -fy,〜にする,modi・fy:修正する/veri・fy:検証する/clari・fy:明確にする",
+        "STAGE 3: 高度形容詞・副詞語尾スペリング,-ic / -ical,形容詞化（〜の・技術）,econom・ic:経済の/log・ical:論理的な/crit・ical:批判的な",
+        "-, -ent / -ant,形容詞・名詞化,effici・ent:効率的な/assist・ant:助手/pati・ent:患者",
+        "-, -ance / -ence,名詞化（性質・状態）,dist・ance:距離/confer・ence:会議/pres・ence:存在",
+        "-, -ous / -ose,形容詞化（〜が多い）,verb・ose:冗長な/gener・ous:寛大な/danger・ous:危険な",
+        "-, -oid,〜に似たもの,andr・oid:人造人間/human・oid:人型の/aster・oid:小惑星",
+        "-, -less,否定（〜のない）,care・less:不注意な/end・less:終わりのない/flaw・less:完璧な",
+        "-, -fold,〜倍の,mani・fold:多様な/ten・fold:10倍の/two・fold:2倍の",
+        "-, -wise,〜の方向へ・関して,clock・wise:時計回りに/like・wise:同様に/other・wise:さもなければ",
+        "-, -ways,方向・やり方,al・ways:いつも/side・ways:横へ/any・ways:とにかく",
+        "-, -proof,耐える・防ぐ,water・proof:防水の/bullet・proof:防弾の/fire・proof:耐火の"
+      ],
+      latin: [
+        "STAGE 1: 視覚・輸送の語根,spect,見る,in・spect:検査する/re・spect:尊敬する/pro・spect:見込み",
+        "-,port,運ぶ,ex・port:輸出する/im・port:輸入する/trans・port:輸送する",
+        "-,vis / vid,見る,vis・ible:目に見える/ad・vise:助言する/pro・vide:供給する",
+        "-,duct / duc,導く,con・duct:実行する/pro・duce:生産する/re・duce:減らす",
+        "-,tract,引く,at・tract:引きつける/con・tract:契約する/ex・tract:抽出する",
+        "-,mit / miss,送る,sub・mit:提出する/trans・mit:送信する/dis・miss:解雇する",
+        "-,struct,組み立てる,con・struct:建設する/in・struct:指示する/de・stroy:破壊する",
+        "-,form,形作る,in・form:知らせる/re・form:改革する/trans・form:変形する",
+        "-,dict,言う,pre・dict:予測する/contra・dict:矛盾する/dict・ate:書き取らせる",
+        "-,ject,投げる,re・ject:拒絶する/pro・ject:投影する/in・ject:注射する",
+        "STAGE 2: 動作・思考の語根,scrib / script,書く,de・scribe:説明する/sub・scribe:定期購読する/script:台本",
+        "-,sens / sent,感じる,sens・ible:賢明な/con・sent:同意する/sens・or:センサー",
+        "-,fer,運ぶ,trans・fer:移す/pre・fer:好む/of・fer:提供する",
+        "-,cred,信じる,cred・ible:信用できる/cred・it:信用/creed:信条",
+        "-,cap / cept,取る,cap・ture:捕らえる/ac・cept:受け入れる/con・cept:概念",
+        "-,pos / pon,置く,com・pose:構成する/post・pone:延期する/de・posit:預ける",
+        "-,stat / st,立つ,stat・us:地位/e・stab・lish:設立する/stat・ion:駅",
+        "-,cur / curs,走る,cur・rent:現在の/oc・cur:起こる/cur・rency:通貨",
+        "-,fac / fic,作る,fac・tory:工場/ef・fic・ient:効率的な/de・fect:欠陥",
+        "-,tend / tens,伸ばす,ex・tend:延長する/in・tend:意図する/tens・ion:緊張",
+        "STAGE 3: 状態・切断の語根,cid / cis,切る,de・cide:決定する/pre・cise:正確な/in・cis・ion:切開",
+        "-,flu / flux,流れる,flu・ent:流暢な/in・flu・ence:影響/flu・id:液体",
+        "-,gen,生む,gen・erate:生み出す/gen・eral:一般的な/ori・gin:起源",
+        "-,leg / lect,集める,col・lect:集める/se・lect:選ぶ/lect・ure:講義",
+        "-,cand,白く光る,cand・le:ろうそく/cand・idate:候補者/cand・id:率直な",
+        "-,ple / plet,満たす,com・plete:完全な/sup・ply:供給する/im・ple・ment:実行する",
+        "-,fin,終わる,fin・al:最終の/fin・ance:財政/de・fine:定義する",
+        "-,mov / mot,動く,re・move:取り除く/mot・ion:動き/pro・mote:促進する",
+        "-,press,押す,ex・press:表現する/im・press:印象づける/com・press:圧縮する",
+        "-,pel / puls,推す,com・pel:強いる/im・pulse:衝動/pro・pel:推進する",
+        "STAGE 4: 声・時間・主張の語根,voc / vok,声・呼ぶ,ad・voc・ate:主張する/pro・vok・e:引き起こす/voc・al:声の",
+        "-,claim / clam,叫ぶ・主張する,ex・claim:叫ぶ/pro・claim:宣言する/claim:主張する",
+        "-,ver,真実・正しい,veri・fy:検証する/ver・dict:評決/very:まさに",
+        "-,tempor,時間,tempor・ary:一時的な/con・tempor・ary:現代の/tempo:テンポ",
+        "-,sum / sumpt,取る・消費する,as・sume:仮定する/con・sume:消費する/re・sume:再開する",
+        "-,cad / cas / cid,落ちる・起きる,ac・cident:事故/cas・ual:偶然の/de・cay:腐敗する",
+        "-,fid,信じる,con・fidence:自信/fid・elity:忠誠/dif・fident:自信のない",
+        "-,grat,感謝・喜ばせる,grat・itude:感謝/con・grat・ulate:祝う/grat・eful:感謝して",
+        "-,norm,標準・規律,norm・al:標準の/e・norm・ous:巨大な/ab・norm・al:異常な",
+        "-,ordin,順序・列,ordin・ary:普通の/co・ordin・ate:調整する/sub・ordin・ate:部下の",
+        "STAGE 5: 統治・取引・支配の語根,reg / rect,導く・正しい,reg・ion:地域/reg・ular:規則正しい/di・rect:直接の",
+        "-,merc,商売・報酬,merc・hant:商人/com・merce:商業/merc・y:慈悲",
+        "-,jur / jud,法・誓い,jur・y:陪審員/jud・ge:裁判官/pre・jud・ice:偏見",
+        "-,terr,土地・地球,terr・itory:領土/terr・ain:地形/ex・tra・terr・estrial:地球外の",
+        "-,dom,家・支配,dom・estic:国内の/dom・inate:支配する/king・dom:王国",
+        "-,urb / civ,都市・市民,urb・an:都市の/sub・urb:郊外/civ・il:市民の",
+        "-,val / vail,価値・強い,val・ue:価値/e・val・uate:評価する/a・vail・able:利用できる",
+        "-,mod,尺度・型,modi・fy:修正する/mod・e:様式/mod・erate:適度な",
+        "-,par / per,準備する・整える,pre・pare:準備する/re・pair:修理する/se・par・ate:分ける",
+        "-,serv,守る・仕える,pre・serve:保存する/re・serve:予約する/serv・ant:召使い",
+        "STAGE 6: 結合・閉鎖・近接の語根,junct / jug,結ぶ,junct・ion:接合/con・junct・ion:接続詞/ad・junct:付属物",
+        "-,clud / clus,閉じる,in・clude:含む/ex・clude:除外する/con・clude:結論づける",
+        "-,loc,場所,loc・ation:場所/loc・al:地元の/al・loc・ate:割り当てる",
+        "-,med,真ん中,med・ium:中間の/im・med・iate:即座の/med・ical:医療の",
+        "-,nov,新しい,nov・el:斬新な/re・nov・ate:改装する/in・nov・ate:革新する",
+        "-,tang / tact,触れる,con・tact:接触/in・tact:無傷の/tang・ible:触れられる",
+        "-,cogn / sci,知る・認識する,re・cogn・ize:認識する/con・sci・ous:意識している/sci・ence:科学",
+        "-,aud / audit,聴く,aud・ience:聴衆/aud・io:音声/audit・ion:オーディション",
+        "-,ann / enn,年・1年,ann・ual:毎年の/ann・iversary:記念日/mill・enn・ium:千年紀",
+        "-,cap / capit,頭・中心,capit・al:首都/capit・ain:キャプテン/de・capit・ate:首をはねる",
+        "STAGE 7: 変化・成長・境界の語根,alter / ali,他の・変わる,alter・native:代わりの/ali・en:外国の/alter:変える",
+        "-,brev,短い,brief:短い/ab・brevi・ate:省略する/brev・ity:簡潔さ",
+        "-,center / centr,中心,centr・al:中心の/con・centr・ate:集中する/ec・centr・ic:風変わりな",
+        "-,cert,確実な・決める,cert・ain:確かな/cert・ificate:証明書/as・cert・ain:確かめる",
+        "-,cord / card,心,ac・cord:一致する/re・cord:記録する/cord・ial:心からの",
+        "-,corp,体・組織,corp・oration:法人/corp・orate:企業の/corp・se:死体",
+        "-,cresc / cre,増える・生長する,in・crease:増える/cre・ate:創造する/con・crete:具体的な",
+        "-,cur,注意・ケア,ac・cur・ate:正確な/se・cur・e:安全な/cur・e:治療する",
+        "-,equ,等しい,equ・al:等しい/equ・ate:同一視する/ad・equ・ate:十分な",
+        "-,fort,強い,ef・fort:努力/forc・e:力/com・fort:快適さ",
+        "STAGE 8: 命・歩み・測定の語根,grad / gress,歩く・進む,grad・uate:卒業する/pro・gress:進歩/ag・gress・ive:攻撃的な",
+        "-,hab / hib,持つ・住む,hab・it:習慣/ex・hib・it:展示する/in・hab・it:住む",
+        "-,later,横・側,later・al:横の/bi・later・al:二国間の/multi・later・al:多国間の",
+        "-,liter,文字,liter・ary:文学の/liter・ature:文学/il・liter・ate:読み書きできない",
+        "-,magn / maj,大きい,magn・ify:拡大する/maj・or:主要な/maj・esty:威厳",
+        "-,man / manu,手,manu・al:手動の/manu・facture:製造する/manu・script:原稿",
+        "-,mar,海,mar・ine:海の/sub・mar・ine:潜水艦/mar・itime:海事の",
+        "-,mem / ment,心・記憶,mem・ory:記憶/ment・ion:言及する/ment・al:精神の",
+        "-,min,小さい・突き出る,min・or:小さい/min・imum:最小限/di・min・ish:減らす",
+        "-,vit / viv,生命・生きる,vit・al:不可欠な/sur・viv・e:生き残る/viv・id:鮮明な"
+      ],
+      germanic: [
+        "STAGE 1: 基本動作の語根,bear,運ぶ・産む,bear・able:耐えられる/birth:誕生/burd・en:重荷",
+        "-,bind / bond,結ぶ,bind・ing:拘束力のある/bound・ary:境界/bond:絆",
+        "-,break,壊す,out・break:発生/break・down:崩壊/breach:違反",
+        "-,come,来る,out・come:結果/in・come:収入/over・come:克服する",
+        "-,draw,引く・描く,with・draw:引き出す/draw・er:引き出し/draft:草稿",
+        "-,fall,落ちる,be・fall:降りかかる/down・fall:転落/fail・ure:失敗",
+        "-,hold,保つ,up・hold:支持する/house・hold:世帯/with・hold:保留する",
+        "-,lead,導く,lead・er:指導者/mis・lead:誤解させる/lead・ership:指導力",
+        "-,make,作る,make・r:製造者/mis・match:不釣り合い/make・up:構成",
+        "-,set,置く,set・up:設定/set・back:挫折/off・set:相殺する",
+        "STAGE 2: 位置・性質の接頭辞,fore-,前の,fore・cast:予測する/fore・head:額/fore・see:予見する",
+        "-,mid-,中央の,mid・st:真ん中/mid・night:真夜中/mid・point:中間点",
+        "-,mis-,誤った,mis・lead:誤解させる/mis・take:間違い/mis・place:置き忘れる",
+        "-,out-,外へ・勝る,out・perform:凌駕する/out・come:結果/out・line:輪郭",
+        "-,over-,超えて,over・come:克服する/over・look:見落とす/over・all:全体的な",
+        "-,under-,下へ,under・go:経験する/under・mine:弱める/under・stand:理解する",
+        "-,with-,反対に・離れて,with・draw:撤退する/with・hold:保留する/with・stand:耐える",
+        "-,by-,脇・副次的,by・stander:傍観者/by・pass:迂回路/by・product:副産物",
+        "-,off-,離れて,off・set:相殺する/off・spring:子孫/off・shore:沖合の",
+        "-,up-,上へ,up・date:更新する/up・grade:向上させる/up・hold:支持する",
+        "STAGE 3: 状態・関係の接尾辞,-ward,〜方向へ,back・ward:後方へ/in・ward:内側へ/for・ward:前方へ",
+        "-, -some,〜の性質を持つ,awe・some:素晴らしい/tire・some:退屈な/trouble・some:厄介な",
+        "-, -hood,状態・集団,child・hood:子供時代/neighbor・hood:近所/liveli・hood:生計",
+        "-, -ness,性質,dark・ness:暗闇/busi・ness:仕事/aware・ness:認識",
+        "-, -ship,関係・スキル,craftsman・ship:職人技/relation・ship:関係/leader・ship:指導力",
+        "-, -less,〜がない,count・less:無数の/hope・less:絶望的な/help・less:無力な",
+        "-, -ful,〜に満ちた,success・ful:成功した/power・ful:強力な/care・ful:注意深い",
+        "-, -ly,〜のように,quick・ly:素早く/friend・ly:友好的な/year・ly:毎年の",
+        "-, -ish,〜っぽい,child・ish:子供っぽい/self・ish:利己的な/styl・ish:おしゃれな",
+        "-, -th,状態・長さ,leng・th:長さ/tru・th:真実/grow・th:成長",
+        "STAGE 4: 人物・集合の接尾辞,-er / -or,〜する人・物,employ・er:雇用主/doct・or:医者/act・or:俳優",
+        "-, -ee,〜される人,employ・ee:従業員/nomin・ee:候補者/train・ee:研修生",
+        "-, -ist,専門家・〜主義者,special・ist:専門家/econom・ist:経済学者/scient・ist:科学者",
+        "-, -ian,〜の人,technic・ian:技術者/music・ian:音楽家/politic・ian:政治家",
+        "-, -ary,〜に関する人・物,secret・ary:秘書/vocabul・ary:語彙/bound・ary:境界",
+        "-,greg,群れ・集まる,ag・greg・ate:集める/se・greg・ate:分離する/con・greg・ation:集会",
+        "-,kin,血縁・親族,kin・dred:親類の/kin・ship:親族関係/kin・d:種類",
+        "-,fold,重・〜倍,two・fold:2倍の/mani・fold:多様な/three・fold:3倍の",
+        "-,craft,技術・乗り物,air・craft:航空機/craft:技術/space・craft:宇宙船",
+        "-,ware,製品・器,soft・ware:ソフトウェア/hard・ware:ハードウェア/glass・ware:ガラス器具",
+        "STAGE 5: 否定・反転の接頭辞,un-,〜でない・反転,un・able:できない/un・do:元に戻す/un・expected:予期しない",
+        "-,in- / im- / ir-,不・非（否定）,im・possible:不可能な/in・direct:間接的な/il・legal:違法な",
+        "-,dis-,分離・否定,dis・agree:同意しない/dis・connect:切断する/dis・cover:発見する",
+        "-,non-,非・無,non・profit:非営利の/non・sense:無意味/non・verbal:非言語の",
+        "-,de-,下へ・離れて・否定,de・crease:減る/de・cline:断る/de・part:出発する",
+        "-,anti-,反・対抗,anti・body:抗体/anti・septic:防腐剤/anti・cipate:予期する",
+        "-,counter-,逆の・対抗,counter・part:対応するもの/counter・act:対抗する/counter・offer:対案",
+        "-,mal-,悪・不調,mal・function:誤動作/mal・nutrition:栄養失調/mal・practice:不正行為",
+        "-,a- / an-,無・非,a・moral:道徳心のない/a・typical:典型例でない/an・archy:無政府状態",
+        "-,se-,離れて,se・parate:分ける/se・cret:秘密/se・lect:選ぶ",
+        "STAGE 6: 時間・空間の副詞的語幹,ever,常に・かつて,for・ever:永遠に/when・ever:いつでも/what・ever:何でも",
+        "-,way,道・方向,sub・way:地下鉄/rail・way:鉄道/any・way:とにかく",
+        "-,side,側・横,in・side:内側/out・side:外側/along・side:並んで",
+        "-,time,時,some・time・s:時々/life・time:一生/time・table:時刻表",
+        "-,where,場所,some・where:どこか/any・where:どこでも/every・where:どこでも",
+        "-,self,自身,my・self:私自身/it・self:それ自体/self・ish:利己的な",
+        "-,long,長い,long・ing:切望/be・long:属する/pro・long:延長する",
+        "-,right,正しい・右,up・right:直立した/copy・right:著作権/out・right:完全な",
+        "-,stand,立つ,stand・ard:基準/out・stand・ing:目立った/under・stand:理解する",
+        "-,step,歩み,foot・step:足音/in・step:足の甲/step・brother:義理の兄弟"
+      ],
+      greek: [
+        "STAGE 1: 科学・計測の語根,bio,生命,bio・logy:生物学/bio・graphy:伝記/bio・sphere:生物圏",
+        "-,geo,地球,geo・graphy:地理学/geo・logy:地質学/geo・metry:幾何学",
+        "-,tele,遠く,tele・phone:電話/tele・scope:望遠鏡/tele・graph:電報",
+        "-,graph / gram,書く,graph・ic:図の/dia・gram:図表/gram・mar:文法",
+        "-,phon,音,sym・phon・y:交響曲/phon・ics:音声学/micro・phon・e:マイク",
+        "-,meter,計る,thermo・meter:温度計/metr・ic:メートル法の/dia・meter:直径",
+        "-,logy / log,学問・言葉,log・ic:論理/psycho・logy:心理学/apo・logy:謝罪",
+        "-,chron,時間,chron・ic:慢性の/chron・ology:年代順/syn・chron・ize:同期させる",
+        "-,path,感情・病気,sym・path・y:同情/path・ology:病理学/em・path・y:共感",
+        "-,phil,愛する,phil・osophy:哲学/phil・anthropist:慈善家/phil・harmonic:交響楽団",
+        "STAGE 2: 社会・概念の語根,phos / phot,光,phot・ograph:写真/phot・on:光子/phot・osynthesis:光合成",
+        "-,dem,人々,dem・ocracy:民主主義/epi・dem・ic:伝染病/dem・ographic:人口統計の",
+        "-,aster / astr,星,astr・onaut:宇宙飛行士/dis・aster:災害/astr・onomy:天文学",
+        "-,auto,自ら,auto・matic:自動の/auto・nomy:自治/auto・graph:サイン",
+        "-,anthrop,人間,anthrop・ology:人類学/mis・anthrop・e:人間嫌い/phil・anthrop・y:慈善活動",
+        "-,arch,支配者・古い,mon・arch:君主/arch・aeology:考古学/arch・itect:建築家",
+        "-,dynam,力,dynam・ic:動的な/dynam・ite:ダイナマイト/dynast・y:王朝",
+        "-,hyper-,超過,hyper・active:多動の/hyper・space:超空間/hyper・link:ハイパーリンク",
+        "-,hypo-,下・不足,hypo・thesis:仮説/hypo・thermia:低体温症/hypo・crisy:偽善",
+        "-,syn / sym,共に,syn・thesis:合成/sym・metry:対称/sym・ptom:症状",
+        "STAGE 3: 規模・状態の語根,mono,単一の,mono・poly:独占/mono・logue:独白/mono・tone:単調",
+        "-,poly,多くの,poly・gon:多角形/poly・mer:ポリマー/poly・technic:技術専門学校",
+        "-,micro,小さい,micro・scope:顕微鏡/micro・soft:マイクロソフト/micro・be:微生物",
+        "-,macro,大きい,macro・economics:マクロ経済学/macro・biotic:マクロビオティック/macro:巨大な",
+        "-,techno,技術,techno・logy:科学技術/techn・ical:技術的な/techn・ique:技巧",
+        "-,psych,精神,psych・ology:心理学/psych・iatrist:精神科医/psych・ic:超能力のある",
+        "-,therm,熱,therm・ometer:温度計/therm・al:熱の/therm・ostat:サーモスタット",
+        "-,hydro,水,hydro・gen:水素/hydr・aulic:水圧の/hydr・ate:水和物",
+        "-,eco,環境・家,eco・nomy:経済/eco・logy:生態学/eco・system:生態系",
+        "-,iso,等しい,iso・late:孤立させる/iso・tope:同位体/iso・bar:等圧線",
+        "STAGE 4: 思想・生命・形態の語根,biblio,本,biblio・graphy:参考文献/biblio・phile:愛書家/Bible:聖書",
+        "-,chrom,色,mono・chrom・e:単色の/chrom・osome:染色体/chrom・e:クロム",
+        "-,cosm,宇宙・秩序,cosm・os:宇宙/cosm・opolitan:国際的な/cosm・etic:化粧品",
+        "-,crit,判断・選別,crit・ical:批判的な/crit・erion:基準/crit・ic:批評家",
+        "-,cycl,円・車輪,cycl・e:周期/bi・cycl・e:自転車/re・cycl・e:再利用する",
+        "-,dog / dox,意見・教義,dog・ma:教義/para・dox:逆説/ortho・dox:正統派の",
+        "-,erg / urg,仕事・作用,en・erg・y:エネルギー/all・erg・y:アレルギー/s・urg・eon:外科医",
+        "-,gam,結婚・結合,bi・gam・y:重婚/mono・gam・y:一夫一婦制/gam・ete:配偶子",
+        "-,gloss / glot,言語・舌,gloss・ary:用語集/poly・glot:多言語を話す人",
+        "-,hydr,水,hydr・oelectric:水力発電の/hydr・ophobia:恐水病/de・hydr・ate:脱水する",
+        "STAGE 5: 構造・状態・理念の語根,morph,形,meta・morph・osis:変態/a・morph・ous:無定形の/morph・ology:形態学",
+        "-,neo,新しい,neo・logism:新造語/neo・natal:新生児の/Neo・lithic:新石器時代の",
+        "-,nom,法・規則・名,eco・nom・y:経済/astro・nom・y:天文学/auto・nom・y:自治",
+        "-,ortho,正しい・直角,ortho・dox:正統の/ortho・dontist:歯科矯正医/ortho・pedic:整形外科の",
+        "-,pan,全・すべて,pan・demic:世界的大流行/pan・orama:全景/pan・ic:パニック",
+        "-,ped,子供・教育,ped・agogy:教育学/ped・iatrician:小児科医/encyclo・ped・ia:百科事典",
+        "-,polis / polit,都市・国家,poli・cy:政策/poli・ce:警察/polit・ical:政治的な",
+        "-,scope,見る機器,tele・scope:望遠鏡/micro・scope:顕微鏡/scope:範囲",
+        "-,soph,知恵,philo・soph・y:哲学/soph・isticated:洗練された/soph・omore:2年生",
+        "-,type,型・印,type:型/proto・type:原型/type・writer:タイプライター",
+        "STAGE 6: 自然・物質・抽象の語根,aer,空気,aer・ial:空気の/aer・ospace:航空宇宙/aer・obic:有酸素の",
+        "-,agon,格闘・競技,agon・y:苦痛/ant・agon・ist:敵対者/prot・agon・ist:主人公",
+        "-,baro,重圧・重さ,baro・meter:気圧計/baro・tone:バリトン",
+        "-,crypto,隠された,crypto・currency:暗号通貨/crypto・graphy:暗号作成",
+        "-,dia,通して・横切って,dia・gonal:対角線の/dia・logue:対話/dia・meter:直径",
+        "-,hem / hemat,血,hem・oglobin:ヘモグロビン/an・em・ia:貧血/hem・orrhage:出血",
+        "-,kine / cine,動き,cine・ma:映画/kine・tic:動的な/tele・kine・sis:念動力",
+        "-,lith,石,mono・lith:一枚岩/lith・ium:リチウム/lith・ography:石版印刷",
+        "-,pyr,火,pyr・amid:ピラミッド/pyr・otechnics:花火/pyr・omania:放火癖",
+        "-,zoo,動物,zoo:動物園/zoo・logy:動物学/zod・iac:黄道帯"
+      ]
+    };
+
+    const stageMasterData = {};
+    Object.keys(rawDB).forEach(origin => {
+      stageMasterData[origin] = [];
+      let currentStage = null;
+      rawDB[origin].forEach(line => {
+        const parts = line.split(',');
+        if (parts[0] !== "-") {
+          currentStage = { stageName: parts[0], items: [] };
+          stageMasterData[origin].push(currentStage);
+        }
+        if (parts.length >= 4) {
+          currentStage.items.push({ q: parts[1], a: parts[2], ex: parts[3] });
+        }
+      });
+    });
+
+    class SoundSystem {
+      constructor() {
+        this.ctx = null;
+        this.sfxEnabled = true;
+        this.bgmEnabled = false; 
+        this.synth = window.speechSynthesis;
+        this.currentTrack = 1;
+        this.bgmTimer = null;
+        this.bgmStep = 0;
+        this.voiceRate = 0.9;
+      }
+      init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      playHit(f=440, type='triangle') {
+        if (!this.sfxEnabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const playTone = (freq, delay) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type; 
+          osc.frequency.setValueAtTime(freq, now + delay);
+          gain.gain.setValueAtTime(0.15, now + delay);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.15);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + delay); osc.stop(now + delay + 0.15);
+        };
+        playTone(f, 0);           
+        playTone(f * 1.25, 0.03); 
+      }
+      playError() {
+        if (!this.sfxEnabled) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square'; 
+        osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.15);
+      }
+      speakEnglish(text) {
+        if (!this.sfxEnabled || !this.synth) return;
+        try {
+          this.synth.cancel();
+          const clean = text.replace(/[^a-zA-Z]/g, '');
+          if (!clean) return;
+          const u = new SpeechSynthesisUtterance(clean);
+          u.lang = 'en-US';
+          u.rate = this.voiceRate;
+          this.synth.speak(u);
+        } catch(e){}
+      }
+      changeVoiceRate(rate) { this.voiceRate = rate; }
+      toggleBGM() {
+        this.init(); 
+        this.bgmEnabled = !this.bgmEnabled;
+        const bs = document.getElementById('bgmStatus');
+        const bi = document.getElementById('bgmIcon');
+        if (this.bgmEnabled) { 
+          bs.textContent = 'BGM 再生中'; bs.className = 'text-xs font-mono font-bold text-amber-300 animate-pulse'; 
+          bi.textContent = '⏸️';
+          this.startAmbientBGM();
+        } else { 
+          bs.textContent = 'BGM 停止'; bs.className = 'text-xs font-mono font-bold text-slate-400'; 
+          bi.textContent = '▶️';
+          this.stopAmbientBGM();
+        }
+      }
+      changeTrack(trackNum) {
+        this.currentTrack = trackNum;
+        if (this.bgmEnabled) {
+          this.stopAmbientBGM();
+          this.startAmbientBGM();
+        }
+      }
+      startAmbientBGM() {
+        this.init();
+        this.stopAmbientBGM();
+        this.bgmStep = 0;
+        const scheduleNext = () => {
+          if (!this.bgmEnabled || !this.ctx) return;
+          let chords = [], filterFreq = 380, intervalSec = 3.6, volume = 0.08; 
+          if (this.currentTrack === 1) { 
+            chords = [[261.63, 329.63, 392.00, 493.88], [220.00, 261.63, 329.63, 392.00], [174.61, 261.63, 329.63, 349.23]];
+            intervalSec = 3.6; filterFreq = 500; volume = 0.08;
+          } else if (this.currentTrack === 2) { 
+            chords = [[392.00, 493.88, 587.33], [349.23, 440.00, 523.25]];
+            intervalSec = 2.0; filterFreq = 1000; volume = 0.06;
+          } else { 
+            chords = [[110.00, 164.81], [98.00, 146.83], [123.47, 174.61]];
+            intervalSec = 2.5; filterFreq = 300; volume = 0.1;
+          }
+          const currentChord = chords[this.bgmStep % chords.length];
+          this.bgmStep++;
+          const now = this.ctx.currentTime;
+          currentChord.forEach(freq => {
+            try {
+              const osc = this.ctx.createOscillator();
+              const gain = this.ctx.createGain();
+              const filter = this.ctx.createBiquadFilter();
+              osc.type = (this.currentTrack === 3) ? 'sawtooth' : 'triangle';
+              osc.frequency.value = freq;
+              filter.type = 'lowpass'; filter.frequency.value = filterFreq;
+              gain.gain.setValueAtTime(0, now);
+              gain.gain.linearRampToValueAtTime(volume, now + (intervalSec * 0.3));
+              gain.gain.linearRampToValueAtTime(0, now + intervalSec);
+              osc.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+              osc.start(now); osc.stop(now + intervalSec);
+            } catch(e){}
+          });
+          this.bgmTimer = setTimeout(scheduleNext, intervalSec * 1000);
+        };
+        scheduleNext();
+      }
+      stopAmbientBGM() {
+        if (this.bgmTimer) { clearTimeout(this.bgmTimer); this.bgmTimer = null; }
+      }
+    }
+    const sound = new SoundSystem();
+    
+    document.getElementById('bgmBtn').addEventListener('click', async () => {
+      sound.init();
+      sound.toggleBGM();
+    });
+
+    let gamePlayMode = 'typing', selectedOrigin = 'affix', speedLevel = 'normal', baseSpeed = 0.8, currentStageIndex = 0;
+    let mistakesMap = JSON.parse(localStorage.getItem('unsaid_mistakes')) || {};
+    let currentPool = [], score = 0, combo = 0, maxCombo = 0, feverGauge = 0, timeLeft = 60;
+    let timerId = null, fallAnimFrame = null, autoPlayTimeout = null;
+    let totalAttempts = 0, correctCount = 0;
+    let currentTarget = null, targetCleanSpellList = [], currentActiveTargetSpell = "", typedBuffer = "";
+    let isQuestionActive = false, isAutoPlaying = false;
+    let currentDerivedList = [], currentDerivedIndex = 0, distractorBtnElements = [], questionStartTime = 0, questionDuration = 8000;
+    let isExamMode = false, isSingleDerivedAutoPlay = false;
+    
+    window.kimaruTarget = null; window.kimaruDerivedList = []; window.kimaruDerivedIndex = 0;
+
+    const gameScreen = document.getElementById('gameScreen');
+    const resultScreen = document.getElementById('resultScreen');
+    const menuScreen = document.getElementById('menuScreen');
+    const homeBtn = document.getElementById('homeBtn');
+    const gameHud = document.getElementById('gameHud');
+    const rootSpellText = document.getElementById('rootSpellText');
+    const rootMeaningText = document.getElementById('rootMeaningText');
+    const derivedSpellText = document.getElementById('derivedSpellText');
+    const derivedMeaningText = document.getElementById('derivedMeaningText');
+    const answersGrid = document.getElementById('answersGrid');
+    const kimaruRootInfoArea = document.getElementById('kimaruRootInfoArea');
+
+    function setGamePlayMode(mode) {
+      gamePlayMode = mode;
+      ['auto','choice','typing','kimaru'].forEach(m => {
+        const btn = document.getElementById('mode' + m.charAt(0).toUpperCase() + m.slice(1) + 'Btn');
+        if(btn){
+          if (m === mode) btn.className = "py-2.5 rounded-lg font-bold text-sm sm:text-base transition flex items-center justify-center space-x-1 bg-amber-700 border border-amber-500 text-amber-50 shadow-inner";
+          else btn.className = "py-2.5 rounded-lg font-bold text-sm sm:text-base transition flex items-center justify-center space-x-1 text-amber-300 hover:text-amber-100";
+        }
+      });
+    }
+
+    function selectRootOrigin(origin) {
+      selectedOrigin = origin;
+      ['Affix', 'Latin', 'Germanic', 'Greek'].forEach(o => {
+        const btn = document.getElementById('tab' + o);
+        if (o.toLowerCase() === origin) btn.className = "flex-1 py-2 font-bold rounded-lg transition bg-amber-700 text-amber-50 shadow-inner";
+        else btn.className = "flex-1 py-2 font-bold rounded-lg transition text-amber-300 hover:text-amber-100";
+      });
+      renderStageList();
+    }
+
+    function setSpeedLevel(lvl) {
+      speedLevel = lvl;
+      baseSpeed = lvl === 'slow' ? 0.4 : lvl === 'fast' ? 1.3 : 0.8;
+      questionDuration = lvl === 'slow' ? 12000 : lvl === 'fast' ? 5000 : 8000;
+      ['Slow', 'Normal', 'Fast'].forEach(s => {
+        const btn = document.getElementById('speed' + s + 'Btn');
+        if (s.toLowerCase() === lvl) btn.className = "px-3 py-1.5 rounded-lg font-bold bg-amber-700 border border-amber-400 text-amber-50 shadow-inner";
+        else btn.className = "px-3 py-1.5 rounded-lg font-bold text-amber-300 hover:text-amber-100";
+      });
+    }
+
+    function renderStageList() {
+      const c = document.getElementById('stageListContainer');
+      c.innerHTML = '';
+      (stageMasterData[selectedOrigin] || []).forEach((stg, idx) => {
+        const btn = document.createElement('button');
+        btn.onclick = () => { currentStageIndex = idx; startGameWithPool(stg.items); };
+        btn.className = "w-full sepia-panel hover:bg-amber-800/40 hover:border-amber-400/60 p-4 rounded-xl flex items-center justify-between group transition transform active:scale-95 text-left mb-3 shadow-md";
+        btn.innerHTML = `<div class="flex items-center space-x-4"><div class="w-12 h-12 rounded-xl bg-amber-950/60 border border-sepiaGold/50 text-amber-200 flex items-center justify-center font-mono font-bold text-base shadow-inner">${idx+1}</div><div><div class="font-bold text-amber-50 text-base sm:text-lg group-hover:text-amber-200 transition-colors">${stg.stageName}</div><div class="text-xs text-amber-300 mt-1">全${stg.items.length}語根（約${stg.items.length * 3}単語）</div></div></div>`;
+        c.appendChild(btn);
+      });
+    }
+
+    function startExamMode() {
+      let allItems = [];
+      Object.keys(stageMasterData).forEach(origin => {
+        stageMasterData[origin].forEach(stg => {
+          stg.items.forEach(item => {
+            allItems.push(item);
+            const mistakes = mistakesMap[item.q] || 0;
+            const extraCount = Math.min(10, mistakes);
+            for(let i = 0; i < extraCount; i++) allItems.push(item);
+          });
+        });
+      });
+      allItems = allItems.sort(() => Math.random() - 0.5);
+      isExamMode = true; isSingleDerivedAutoPlay = false; currentStageIndex = -1; 
+      setGamePlayMode('typing'); 
+      startGameWithPool(allItems);
+    }
+    
+    function startAllRootAutoPlay() {
+      let allItems = [];
+      ['affix', 'latin', 'germanic', 'greek'].forEach(origin => {
+        stageMasterData[origin].forEach(stg => {
+          stg.items.forEach(item => allItems.push(item));
+        });
+      });
+      isExamMode = false; isSingleDerivedAutoPlay = true; currentStageIndex = -1; 
+      setGamePlayMode('auto'); 
+      startGameWithPool(allItems);
+    }
+
+    function forceReturnHome() {
+      if (isExamMode && totalAttempts > 0) {
+        if (confirm("ゲームを終了して結果を見ますか？\n(キャンセルでそのままメニューに戻ります)")) {
+          endGame(); return;
+        }
+      }
+      clearTimeout(timerId); clearTimeout(autoPlayTimeout); cancelAnimationFrame(fallAnimFrame);
+      isQuestionActive = false; isAutoPlaying = false; isExamMode = false; isSingleDerivedAutoPlay = false;
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      gameScreen.classList.add('hidden'); resultScreen.classList.add('hidden'); gameHud.classList.add('hidden'); homeBtn.classList.add('hidden'); menuScreen.classList.remove('hidden');
+    }
+
+    function startGameWithPool(items) {
+      if (gamePlayMode === 'kimaru') {
+        currentPool = [...items].sort(() => Math.random() - 0.5);
+        window.kimaruTarget = null; window.kimaruDerivedIndex = 0;
+      } else {
+        currentPool = [...items];
+      }
+      score = combo = maxCombo = feverGauge = totalAttempts = correctCount = 0;
+      if (gamePlayMode === 'auto' || gamePlayMode === 'kimaru') {
+        timeLeft = 999; document.getElementById('hudTimer').textContent = '∞';
+      } else if (isExamMode) {
+        timeLeft = 0; document.getElementById('hudTimer').textContent = '0s';
+      } else {
+        timeLeft = 60; document.getElementById('hudTimer').textContent = `${timeLeft}s`;
+      }
+      document.getElementById('hudScore').textContent = '0';
+      document.getElementById('hudCombo').textContent = '0';
+      document.getElementById('feverBar').style.width = '0%';
+
+      menuScreen.classList.add('hidden'); resultScreen.classList.add('hidden'); gameScreen.classList.remove('hidden'); gameHud.classList.remove('hidden'); homeBtn.classList.remove('hidden');
+      
+      if (gamePlayMode === 'typing') {
+        answersGrid.classList.add('hidden'); document.getElementById('virtualKeyboard').classList.remove('hidden'); document.getElementById('typingGuideArea').classList.remove('hidden'); kimaruRootInfoArea.classList.add('hidden'); initVirtualKeyboard();
+      } else if (gamePlayMode === 'choice') {
+        answersGrid.classList.remove('hidden'); document.getElementById('virtualKeyboard').classList.add('hidden'); document.getElementById('typingGuideArea').classList.add('hidden'); kimaruRootInfoArea.classList.add('hidden');
+      } else if (gamePlayMode === 'kimaru') {
+        answersGrid.classList.add('hidden'); document.getElementById('virtualKeyboard').classList.remove('hidden'); document.getElementById('typingGuideArea').classList.remove('hidden'); kimaruRootInfoArea.classList.remove('hidden'); initVirtualKeyboard();
+      } else if (gamePlayMode === 'auto') {
+        answersGrid.classList.add('hidden'); document.getElementById('virtualKeyboard').classList.add('hidden'); document.getElementById('typingGuideArea').classList.add('hidden'); kimaruRootInfoArea.classList.add('hidden');
+      }
+
+      spawnNextFallingQuestion();
+
+      if (gamePlayMode !== 'auto') {
+        clearInterval(timerId);
+        timerId = setInterval(() => {
+          if (isExamMode) {
+            timeLeft++; document.getElementById('hudTimer').textContent = `${timeLeft}s`;
+          } else {
+            timeLeft--; document.getElementById('hudTimer').textContent = `${timeLeft}s`;
+            if (timeLeft <= 0) endGame();
+          }
+        }, 1000);
+        updateFallingPhysics();
+      }
+    }
+
+    function highlightRoot(wordWithDot) { return wordWithDot.split('・').join('・<wbr>'); }
+
+    function updateCardUI(maskRootSpell, maskRootMeaning) {
+      rootSpellText.textContent = maskRootSpell ? "???" : currentTarget.q;
+      rootMeaningText.textContent = maskRootMeaning ? "???" : currentTarget.a;
+      const pairStr = currentDerivedList[currentDerivedIndex] || "";
+      let dSpell = pairStr, dMean = "";
+      if (pairStr.includes(':')) [dSpell, dMean] = pairStr.split(':');
+      derivedSpellText.innerHTML = highlightRoot(dSpell);
+      derivedMeaningText.textContent = dMean;
+    }
+
+    function speakCurrentDerived() {
+      const pair = currentDerivedList[currentDerivedIndex] || "";
+      const spell = pair.split(':')[0].replace(/・/g, '');
+      sound.speakEnglish(spell);
+    }
+
+    function spawnNextFallingQuestion() {
+      answersGrid.innerHTML = ''; typedBuffer = ""; distractorBtnElements = [];
+      if (gamePlayMode === 'kimaru' && window.kimaruTarget && window.kimaruDerivedIndex < window.kimaruDerivedList.length) {
+        currentTarget = window.kimaruTarget; currentDerivedList = window.kimaruDerivedList; currentDerivedIndex = window.kimaruDerivedIndex; targetCleanSpellList = currentTarget.q.split('/').map(s => s.replace(/[-_() ]/g, '').toLowerCase().trim());
+      } else {
+        if (gamePlayMode === 'kimaru') {
+          if (currentPool.length === 0) { endGame(); return; }
+          currentTarget = currentPool.pop();
+        } else if (isSingleDerivedAutoPlay) {
+          if (currentPool.length === 0) { endGame(); return; }
+          currentTarget = currentPool.shift();
+        } else {
+          currentTarget = currentPool[Math.floor(Math.random() * currentPool.length)];
+        }
+        targetCleanSpellList = currentTarget.q.split('/').map(s => s.replace(/[-_() ]/g, '').toLowerCase().trim());
+        currentDerivedList = currentTarget.ex.split('/').map(s => s.trim());
+        currentDerivedIndex = 0;
+        if (gamePlayMode === 'kimaru') {
+          window.kimaruTarget = currentTarget; window.kimaruDerivedList = currentDerivedList; window.kimaruDerivedIndex = 0;
+        }
+      }
+
+      const pairStr = currentDerivedList[currentDerivedIndex] || "";
+      const dSpell = pairStr.split(':')[0].replace(/・/g, '').toLowerCase();
+      
+      if (gamePlayMode === 'kimaru') {
+        currentActiveTargetSpell = dSpell;
+      } else {
+        const sortedSpells = [...targetCleanSpellList].sort((a, b) => b.length - a.length);
+        currentActiveTargetSpell = sortedSpells[0]; 
+        for (const spell of sortedSpells) {
+          if (dSpell.includes(spell)) { currentActiveTargetSpell = spell; break; }
+        }
+      }
+
+      if (isExamMode && gamePlayMode !== 'kimaru') document.getElementById('questionCategory').textContent = `👑 TYPING EXAM 👑`;
+      else if (gamePlayMode === 'kimaru') document.getElementById('questionCategory').textContent = `🧠 KIMARU MODE 🧠`;
+      else if (isSingleDerivedAutoPlay) document.getElementById('questionCategory').textContent = `🎧 ENDLESS AUTO-PLAY`;
+      else document.getElementById('questionCategory').textContent = `STAGE • ${gamePlayMode.toUpperCase()}`;
+      
+      questionStartTime = performance.now();
+      const barFill = document.getElementById('deadlineBarFill');
+      if (barFill) barFill.style.width = '100%';
+      const barContainer = document.getElementById('deadlineBarContainer');
+      if (barContainer) barContainer.style.opacity = gamePlayMode === 'kimaru' ? '0' : '1';
+
+      if (gamePlayMode === 'auto') {
+        answersGrid.classList.add('hidden'); isQuestionActive = false; startAutoPlaySequence();
+      } else {
+        isQuestionActive = true;
+        if (gamePlayMode === 'choice') {
+          updateCardUI(false, true); 
+          const distractors = currentPool.filter(c => c.q !== currentTarget.q).sort(()=>Math.random()-0.5).slice(0,3);
+          const opts = [currentTarget, ...distractors].sort(()=>Math.random()-0.5);
+          opts.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = "sepia-panel bg-amber-900/50 hover:bg-amber-800/70 p-4 rounded-xl text-sm sm:text-base font-bold text-amber-50 transition transform active:scale-95 shadow-md min-h-[4rem] border border-sepiaGold/40";
+            btn.textContent = opt.a;
+            btn.onclick = () => handleAnswer(opt.a === currentTarget.a);
+            if (opt.a !== currentTarget.a) distractorBtnElements.push(btn);
+            answersGrid.appendChild(btn);
+          });
+        } else if (gamePlayMode === 'typing') {
+          updateCardUI(true, false); 
+          document.getElementById('typedBufferDisplay').textContent = "_".repeat(currentActiveTargetSpell.length);
+        } else if (gamePlayMode === 'kimaru') {
+          const rawSpell = pairStr.split(':')[0] || "", rawMean = pairStr.split(':')[1] || "";
+          rootSpellText.innerHTML = highlightRoot(rawSpell); rootMeaningText.textContent = rawMean;
+          derivedSpellText.innerHTML = ""; derivedMeaningText.textContent = "";
+          document.getElementById('typedBufferDisplay').textContent = "_".repeat(currentActiveTargetSpell.length);
+          document.getElementById('kimaruRootMeaning').textContent = currentTarget.a;
+          document.getElementById('kimaruRootSpell').textContent = "";
+        }
+        speakCurrentDerived();
+      }
+    }
+
+    function startAutoPlaySequence() {
+      isAutoPlaying = true; clearTimeout(autoPlayTimeout); playNextDerived();
+    }
+
+    function playNextDerived() {
+      if (!isAutoPlaying || gameScreen.classList.contains('hidden')) return; 
+      updateCardUI(false, false); speakCurrentDerived();
+      autoPlayTimeout = setTimeout(() => {
+        if (!isAutoPlaying || gameScreen.classList.contains('hidden')) return; 
+        currentDerivedIndex++;
+        if (currentDerivedIndex < currentDerivedList.length && !isSingleDerivedAutoPlay) {
+          playNextDerived();
+        } else {
+          score += 100; document.getElementById('hudScore').textContent = score;
+          spawnNextFallingQuestion(); 
+        }
+      }, 3000); 
+    }
+
+    function updateFallingPhysics() {
+      if (gameScreen.classList.contains('hidden') || !isQuestionActive) return;
+      if (gamePlayMode === 'kimaru') { fallAnimFrame = requestAnimationFrame(updateFallingPhysics); return; }
+      const now = performance.now(); const elapsed = now - questionStartTime;
+      const currentDuration = Math.max(4000, questionDuration - (combo * 200));
+      let progress = elapsed / currentDuration;
+      if (progress > 1) progress = 1;
+      const barFill = document.getElementById('deadlineBarFill');
+      if (barFill) barFill.style.width = `${(1 - progress) * 100}%`;
+      if (gamePlayMode === 'choice' && distractorBtnElements.length > 0) {
+        if (progress > 0.4 && !distractorBtnElements[0].dataset.elim) eliminateDistractor(0);
+        if (progress > 0.7 && distractorBtnElements.length > 1 && !distractorBtnElements[1].dataset.elim) eliminateDistractor(1);
+      }
+      if (progress >= 1) handleAnswer(false);
+      else fallAnimFrame = requestAnimationFrame(updateFallingPhysics);
+    }
+
+    function eliminateDistractor(idx) {
+      const btn = distractorBtnElements[idx];
+      btn.dataset.elim = "true";
+      btn.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
+      sound.playHit(280);
+      if (gamePlayMode === 'choice' && currentDerivedList.length > 1) {
+        currentDerivedIndex = (currentDerivedIndex + 1) % currentDerivedList.length;
+        updateCardUI(false, true); speakCurrentDerived();
+      }
+    }
+
+    function recordMistake(target) {
+      if (!target) return;
+      mistakesMap[target.q] = (mistakesMap[target.q] || 0) + 1;
+      localStorage.setItem('unsaid_mistakes', JSON.stringify(mistakesMap));
+    }
+
+    function recordSuccess(target) {
+      if (!target || !mistakesMap[target.q]) return;
+      mistakesMap[target.q] = Math.max(0, mistakesMap[target.q] - 1);
+      localStorage.setItem('unsaid_mistakes', JSON.stringify(mistakesMap));
+    }
+
+    function handleAnswer(isCorrect) {
+      if (!isQuestionActive) return;
+      totalAttempts++;
+      if (isCorrect) {
+        recordSuccess(currentTarget);
+        correctCount++; combo++; maxCombo = Math.max(combo, maxCombo);
+        feverGauge = Math.min(100, feverGauge + 15);
+        score += (100 + combo * 25);
+        sound.playHit(500);
+      } else {
+        recordMistake(currentTarget);
+        combo = 0; feverGauge = Math.max(0, feverGauge - 25);
+        sound.playError();
+        document.body.classList.add('shake');
+        setTimeout(() => document.body.classList.remove('shake'), 250);
+      }
+      document.getElementById('hudScore').textContent = score;
+      document.getElementById('hudCombo').textContent = combo;
+      document.getElementById('feverBar').style.width = `${feverGauge}%`;
+      cancelAnimationFrame(fallAnimFrame);
+      spawnNextFallingQuestion();
+      updateFallingPhysics();
+    }
+    
+    function handleCharInput(char) {
+      if (!isQuestionActive || (gamePlayMode !== 'typing' && gamePlayMode !== 'kimaru')) return;
+      if (char === 'DEL' || char === 'Backspace') {
+        typedBuffer = typedBuffer.slice(0, -1);
+      } else {
+        const expectedChar = currentActiveTargetSpell[typedBuffer.length];
+        if (expectedChar && char.toLowerCase() === expectedChar.toLowerCase()) {
+          typedBuffer += char.toLowerCase();
+          sound.playHit(520);
+        } else {
+          recordMistake(currentTarget);
+          sound.playError(); combo = 0; feverGauge = Math.max(0, feverGauge - 25);
+          document.getElementById('hudCombo').textContent = combo;
+          document.getElementById('feverBar').style.width = `${feverGauge}%`;
+          document.body.classList.add('shake');
+          setTimeout(() => document.body.classList.remove('shake'), 250);
+          return;
+        }
+      }
+      const underscores = "_".repeat(Math.max(0, currentActiveTargetSpell.length - typedBuffer.length));
+      document.getElementById('typedBufferDisplay').textContent = typedBuffer + underscores;
+      if (typedBuffer === currentActiveTargetSpell) {
+        if (gamePlayMode === 'kimaru') window.kimaruDerivedIndex++;
+        handleAnswer(true);
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (!isQuestionActive || (gamePlayMode !== 'typing' && gamePlayMode !== 'kimaru')) return;
+      const key = e.key;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      if (key === 'Backspace' || key === 'Delete') { handleCharInput('DEL'); e.preventDefault(); }
+      else if (/^[a-zA-Z]$/.test(key)) handleCharInput(key.toLowerCase());
+    });
+
+    function initVirtualKeyboard() {
+      const kb1 = document.getElementById('kbRow1'), kb2 = document.getElementById('kbRow2'), kb3 = document.getElementById('kbRow3');
+      kb1.innerHTML=''; kb2.innerHTML=''; kb3.innerHTML='';
+      const makeBtn = c => {
+        const b = document.createElement('button');
+        b.className = "px-3 py-3 bg-black/40 border border-sepiaGold/40 rounded-lg text-sm sm:text-base font-mono font-bold active:scale-95 text-amber-100 min-w-[2.5rem] hover:bg-amber-800/60 hover:text-white transition shadow-sm";
+        b.textContent = c.toUpperCase();
+        b.onclick = () => handleCharInput(c);
+        return b;
+      };
+      ['q','w','e','r','t','y','u','i','o','p'].forEach(c => kb1.appendChild(makeBtn(c)));
+      ['a','s','d','f','g','h','j','k','l'].forEach(c => kb2.appendChild(makeBtn(c)));
+      ['z','x','c','v','b','n','m','DEL'].forEach(c => kb3.appendChild(makeBtn(c)));
+    }
+
+    function endGame() {
+      clearTimeout(timerId); cancelAnimationFrame(fallAnimFrame);
+      isQuestionActive = false; gameScreen.classList.add('hidden'); resultScreen.classList.remove('hidden');
+      const acc = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0;
+      document.getElementById('resultScore').textContent = score;
+      document.getElementById('resultCombo').textContent = maxCombo;
+      document.getElementById('resultAccuracy').textContent = `${acc}%`;
+      const elapsedSec = (isExamMode || isSingleDerivedAutoPlay || gamePlayMode === 'kimaru') ? Math.max(1, timeLeft) : 60;
+      document.getElementById('resultSpeed').textContent = Math.round((correctCount / elapsedSec) * 60);
+
+      const isPassed = acc >= 70 && score >= 1500;
+      const nextBtn = document.getElementById('nextStageBtn');
+      if (isPassed && currentStageIndex + 1 < stageMasterData[selectedOrigin].length && !isExamMode && !isSingleDerivedAutoPlay) {
+        document.getElementById('passNotification').classList.remove('hidden');
+        nextBtn.classList.remove('hidden');
+        nextBtn.onclick = () => { currentStageIndex++; startGameWithPool(stageMasterData[selectedOrigin][currentStageIndex].items); };
+      } else {
+        document.getElementById('passNotification').classList.add('hidden');
+        nextBtn.classList.add('hidden');
+      }
+    }
+
+    function restartGame() { if (currentPool.length > 0) startGameWithPool(currentPool); }
+
+    function changeTheme(theme) {
+      document.body.classList.remove('theme-midnight', 'theme-emerald');
+      if (theme !== 'sepia') document.body.classList.add('theme-' + theme);
+    }
+
+    setGamePlayMode(gamePlayMode); 
+    selectRootOrigin(selectedOrigin); 
+    setSpeedLevel(speedLevel);
+  </script>
+</body>
+</html>
 
